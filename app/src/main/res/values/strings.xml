@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Nansy_mobile</string>
+    <string name="login_text">Войти</string>
 </resources>

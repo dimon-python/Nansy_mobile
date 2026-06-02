@@ -20,6 +20,11 @@
             android:exported="false">
         </activity>
 
+        <activity android:name=".CommandActivity"
+            android:exported="false">
+
+        </activity>
+
         <activity
             android:name=".MainActivity"
             android:exported="true">

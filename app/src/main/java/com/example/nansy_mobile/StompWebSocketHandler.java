@@ -1,5 +1,9 @@
 package com.example.nansy_mobile;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
+
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -12,6 +16,9 @@ public class StompWebSocketHandler {
     private boolean isConnected = false;
     private String sessionId;
 
+    private final Map<String, Consumer<String>> subscriptionListeners = new ConcurrentHashMap<>();
+    private final Map<String, String> subscriptions = new ConcurrentHashMap<>();
+
     public void connect(String serverUrl, String username, String jwtToken) {
         try {
             OkHttpClient client = new OkHttpClient();
@@ -19,6 +26,7 @@ public class StompWebSocketHandler {
             Request request = new Request.Builder()
                     .url(serverUrl + "?token=" + jwtToken)
                     .addHeader("Authorization", "Bearer " + jwtToken)
+                    .addHeader("Sec-WebSocket-Protocol", "v12.stomp")
                     .build();
 
             webSocket = client.newWebSocket(request, new WebSocketListener() {
@@ -29,12 +37,14 @@ public class StompWebSocketHandler {
                     System.out.println("WebSocket соединение установлено");
                     isConnected = true;
 
-                    String connectFrame = "CONNECT\n" +
+                    String connectFrame = String.format(
+                            "CONNECT\n" +
                             "accept-version:1.2\n" +
                             "host:localhost\n" +
                             "heart-beat:10000,10000\n" +
                             "\n" +
-                            "\0";
+                            "\u0000"
+                    );
 
                     webSocket.send(connectFrame);
                     webSocket.request();
@@ -42,12 +52,15 @@ public class StompWebSocketHandler {
 
                 @Override
                 public void onMessage(WebSocket webSocket, String text) {
+                    System.out.println("📥 RAW: '" + text + "'");
                     buffer.append(text);
 
-                    if (text.endsWith("\0")) {
-                        String fullMessage = buffer.toString();
+                    // Проверяем, есть ли в буфере полный фрейм
+                    String current = buffer.toString();
+                    if (current.contains("\n\n") || current.contains("\0") || current.contains("ERROR")) {
+                        System.out.println("Processing full message");
+                        handleStompFrame(current);
                         buffer.setLength(0);
-                        handleStompFrame(fullMessage);
                         webSocket.request();
                     }
                 }
@@ -83,29 +96,38 @@ public class StompWebSocketHandler {
 
         String subscriptionId = "sub-" + System.currentTimeMillis();
 
-        String subscribeFrame = "SUBSCRIBE\n" +
-                "id:" + subscriptionId + "\n" +
-                "destination:" + destination + "\n" +
-                "ack:auto\n" +
+        subscriptionListeners.put(subscriptionId, listener);
+        subscriptions.put(subscriptionId, destination);
+
+        String subscribeFrame = String.format(
+                "SUBSCRIBE\n" +
+                "id:%s\n" +
+                "destination:%s\n" +
+                "ack:client\n" +
                 "\n" +
-                "\0";
+                "\0",
+                subscriptionId, destination
+        );
 
         webSocket.send(subscribeFrame);
         webSocket.request();
     }
 
-    public void send(String destination, String body) {
+    public void send(String destination, String message) {
         if (!isConnected) {
             System.err.println("Не подключен к серверу");
             return;
         }
 
-        String sendFrame = "SEND\n" +
-                "destination:" + destination + "\n" +
-                "content-type:application/json\n" +
+        String sendFrame = String.format(
+                "SEND\n" +
+                "destination:%s\n" +
+                "content-type:text/plain\n" +
                 "\n" +
-                body + "\n" +
-                "\0";
+                "%s\n" +
+                "\u0000",
+                destination, message
+        );
 
         webSocket.send(sendFrame);
         webSocket.request();
@@ -113,9 +135,12 @@ public class StompWebSocketHandler {
 
     public void disconnect() {
         if (webSocket != null) {
-            String disconnectFrame = "DISCONNECT\n" +
+            String disconnectFrame = String.format(
+                    "DISCONNECT\n" +
+                    "receipt:disconnect-ack\n" +
                     "\n" +
-                    "\0";
+                    "\0"
+            );
             webSocket.send(disconnectFrame);
             webSocket.close(1000, "Client disconnect");
             isConnected = false;
@@ -127,38 +152,65 @@ public class StompWebSocketHandler {
     }
 
     private void handleStompFrame(String frame) {
-        if (frame == null || frame.trim().isEmpty()) {
+        // Убираем null символ и пробелы в конце
+        String cleanFrame = frame.replace("\0", "").trim();
+
+        if (cleanFrame.isEmpty()) {
             System.err.println("получен пустой фрейм");
+            webSocket.send("\n");
             return;
         }
 
-        String[] lines = frame.split("\n");
-
+        String[] lines = cleanFrame.split("\n");
         if (lines.length == 0) {
             System.err.println("фрейм не содержит строк");
             return;
         }
 
         String command = lines[0];
-
-        if (command == null || command.isEmpty()) {
-            System.err.println("команда в фрейме пустая");
-            return;
-        }
+        System.out.println("Command: '" + command + "'");
 
         switch (command) {
             case "CONNECTED":
+                System.out.println("✅ CONNECTED!");
                 handleConnectedFrame(lines);
                 break;
             case "MESSAGE":
+                System.out.println("📩 MESSAGE!");
                 handleMessageFrame(lines);
                 break;
             case "ERROR":
+                System.err.println("❌ ERROR!");
                 handleErrorFrame(lines);
                 break;
             default:
-                System.out.println("Получена неизвестная команда: " + command);
+                System.out.println("Неизвестная команда: " + command);
         }
+
+        String messageId = null;
+        for (String line : lines) {
+            if (line.startsWith("message-id:")) {
+                messageId = line.substring("message-id:".length()).trim();
+                break;
+            }
+        }
+
+        // ✅ Отправляем ACK, чтобы сервер знал, что мы получили сообщение
+        if (messageId != null) {
+            sendAck(messageId);
+        }
+    }
+
+    private void sendAck(String messageId) {
+        String ackFrame = String.format(
+                "ACK\n" +
+                "id:%s\n" +
+                "\n" +
+                "\0",
+                messageId
+        );
+        webSocket.send(ackFrame);
+        System.out.println("✅ ACK отправлен для message-id: " + messageId);
     }
 
     private void handleConnectedFrame(String[] lines) {
@@ -166,16 +218,22 @@ public class StompWebSocketHandler {
             if (line.startsWith("session:")) {
                 sessionId = line.substring("session:".length());
                 System.out.println("STOMP подключен, session-id: " + sessionId);
-                break;
             }
         }
+
+        isConnected = true;
     }
 
     private void handleMessageFrame(String[] lines) {
+        String subscriptionId = null;
         StringBuilder body = new StringBuilder();
         boolean inBody = false;
 
         for (String line : lines) {
+            if (!inBody && line.startsWith("subscription:")) {
+                subscriptionId = line.substring("subscription:".length()).trim();
+            }
+
             if (!inBody && line.isEmpty()) {
                 inBody = true;
                 continue;
@@ -189,6 +247,19 @@ public class StompWebSocketHandler {
 
         String message = body.toString().replace("\0", "");
         System.out.println("Получено сообщение: " + message);
+
+        if (subscriptionId != null && subscriptionListeners.containsKey(subscriptionId)) {
+            Consumer<String> listener = subscriptionListeners.get(subscriptionId);
+            if (listener != null) {
+                listener.accept(message);
+                System.out.println("✅ Listener called for subscription: " + subscriptionId);
+            } else {
+                System.err.println("Listener is null for: " + subscriptionId);
+            }
+        } else {
+            System.err.println("No listener found for subscription: " + subscriptionId);
+            System.err.println("Available subscriptions: " + subscriptionListeners.keySet());
+        }
     }
 
     private void handleErrorFrame(String[] lines) {

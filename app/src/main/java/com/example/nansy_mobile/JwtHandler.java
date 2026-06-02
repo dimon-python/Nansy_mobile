@@ -24,16 +24,16 @@ public class JwtHandler {
         }
     }
 
-    public boolean jwtIsExists() {
+    public static boolean jwtIsExists() {
         String token = ConfigManager.getUserProperty(prefsJwtToken);
         return token != null && !token.isEmpty();
     }
 
-    public String getJwtToken() {
+    public static String getJwtToken() {
         return ConfigManager.getUserProperty(prefsJwtToken);
     }
 
-    public void setJwtToken(String token) {
+    public static void setJwtToken(String token) {
         if (token == null || token.isEmpty()) {
             System.err.println("Token is null");
             return;

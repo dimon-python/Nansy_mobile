@@ -15,15 +15,17 @@ public class AuthHttpHandler {
     private static JwtHandler jwtHandler;
     private static String jwtToken;
     private static Context appContext;
-    private static ConfigManager props;
 
     public static void init(Context context) {
         appContext = context.getApplicationContext();
+
+        jwtHandler = new JwtHandler(appContext);
+        stompHandler = new StompWebSocketHandler();
     }
 
-//    public static boolean login(String login, String password) {
-//
-//    }
+    public static boolean login(String login, String password) {
+
+    }
 
 //    public static boolean register(String login, String password) {
 //
@@ -34,8 +36,6 @@ public class AuthHttpHandler {
 //    }
 
     public static void authenticateAndConnect(String pcUsername) {
-        jwtHandler = new JwtHandler(appContext);
-        stompHandler = new StompWebSocketHandler();
 
         String authUrlStr = ConfigManager.getSystemProperty("auth.server.url");
         if (authUrlStr == null) {
@@ -117,6 +117,4 @@ public class AuthHttpHandler {
 
         stompHandler.send("app/echo", "Hello, world");
     }
-
-    public static String getJwtToken() { return jwtToken; }
 }
