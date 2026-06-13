@@ -18,7 +18,7 @@ public class CommandActivity extends AppCompatActivity {
 
         String serverUrl = ConfigManager.getSystemProperty("websocket.server.url");
         String username = "Dimond";
-        String jwtToken = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkaW1vbmQiLCJpYXQiOjE3Nzk3MjA5NjYsImV4cCI6MTc4MjMxMjk2Nn0.C1nzB17pfPwtF46dDT38f6HoKkOJgQDh7YCmFNRLrzE";
+        String jwtToken = JwtHandler.getJwtToken();
 
         stomp = new StompWebSocketHandler();
         stomp.connect(serverUrl, username, jwtToken);

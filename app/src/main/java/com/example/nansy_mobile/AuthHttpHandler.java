@@ -2,54 +2,48 @@ package com.example.nansy_mobile;
 
 import android.content.Context;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+
 import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.HttpURLConnection;
+import java.util.HashMap;
+import java.util.Map;
 
 public class AuthHttpHandler {
     private static StompWebSocketHandler stompHandler;
     private static String serverUrl;
-    private static URL authUrl;
+    private static String httpServerUrl;
     private static JwtHandler jwtHandler;
     private static String jwtToken;
     private static Context appContext;
+    private static final String LOGIN_ENDPOINT = "/login";
+    private final static String REGISTER_ENDPOINT = "/register";
+    private final static String VERIFY_ENDPOINT = "/verify";
 
     public static void init(Context context) {
         appContext = context.getApplicationContext();
 
         jwtHandler = new JwtHandler(appContext);
         stompHandler = new StompWebSocketHandler();
+        httpServerUrl = ConfigManager.getSystemProperty("auth.server.url");
     }
 
-    public static boolean login(String login, String password) {
-
-    }
-
-//    public static boolean register(String login, String password) {
-//
-//    }
-
-//    public static boolean verify(String jwtToken) {
-//
-//    }
-
-    public static void authenticateAndConnect(String pcUsername) {
-
-        String authUrlStr = ConfigManager.getSystemProperty("auth.server.url");
-        if (authUrlStr == null) {
-            System.err.println("error load auth url");
-            return;
-        }
-
+    public static boolean login(String username, String password) {
         try {
-            authUrl = new URL(authUrlStr);
-            String json = String.format(
-                    "{\"username\":\"%s\"}",
-                    pcUsername
-            );
-            HttpURLConnection httpClient = (HttpURLConnection) authUrl.openConnection();
+            Map<String, String> jsonLoginData = new HashMap<>(); // создаем библиотеку с парами для json
+            jsonLoginData.put("username", username);
+            jsonLoginData.put("password", password);
+            String jsonLogin = new Gson().toJson(jsonLoginData); // превращаем библиотеку в json
+
+            URL loginUrl = new URL(httpServerUrl + LOGIN_ENDPOINT);
+            HttpURLConnection httpClient = (HttpURLConnection) loginUrl.openConnection();
             httpClient.setRequestMethod("POST");
             httpClient.setRequestProperty("Content-Type", "application/json");
             httpClient.setDoOutput(true);
@@ -57,64 +51,86 @@ public class AuthHttpHandler {
             httpClient.setReadTimeout(10000);
 
             try (OutputStream output = httpClient.getOutputStream()) {
-                output.write(json.getBytes());
+                output.write(jsonLogin.getBytes());
                 output.flush();
             }
 
             int responseCode = httpClient.getResponseCode();
-            System.out.println("Response code: " + responseCode);
-
-            BufferedReader reader;
             if (responseCode == 200) {
-                reader = new BufferedReader(new InputStreamReader(httpClient.getInputStream()));
-            } else {
-                reader = new BufferedReader(new InputStreamReader(httpClient.getErrorStream()));
+                InputStream input = httpClient.getInputStream();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(input, "UTF-8"));
+                StringBuilder response = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
+                }
+                reader.close();
+
+                Gson gson = new Gson();
+                JsonObject jsonResponse = gson.fromJson(response.toString(), JsonObject.class);
+                jwtToken = jsonResponse.get("token").getAsString();
+                JwtHandler.setJwtToken(jwtToken);
+                return true;
             }
-
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                response.append(line);
-            }
-            reader.close();
-
-            System.out.println("Response body: " + response.toString());
-
-            if (responseCode == 200) {
-                jwtToken = jwtHandler.parseJwtToken(response.toString());
-                jwtHandler.setJwtToken(jwtToken);
-                System.out.println("✅ Token saved");
-                System.out.println("   jwtToken: " + jwtToken);
-            } else {
-                System.err.println("❌ HTTP error: " + responseCode);
-                return;
-            }
-
-            httpClient.disconnect();
-
-        } catch (Exception e) {
-            System.err.println("❌ Connection error: " + e.getMessage());
+        } catch (IOException e) {
             e.printStackTrace();
-            return;
+            return false;
         }
+        return false;
+    }
 
-        jwtToken = jwtHandler.getJwtToken();
-        if (jwtToken == null || jwtToken.isEmpty()) {
-            System.err.println("❌ No token for WebSocket");
-            return;
+    public static boolean register(String username, String password) {
+        try{
+            Map<String, String> jsonRegistryData = new HashMap<>();
+            jsonRegistryData.put("username", username);
+            jsonRegistryData.put("password", password);
+            String jsonRegistry = new Gson().toJson(jsonRegistryData);
+
+            URL registryUrl = new URL(httpServerUrl + REGISTER_ENDPOINT);
+            HttpURLConnection httpClient = (HttpURLConnection) registryUrl.openConnection();
+            httpClient.setRequestMethod("POST");
+            httpClient.setRequestProperty("Content-Type", "application/json");
+            httpClient.setDoOutput(true);
+            httpClient.setConnectTimeout(10000);
+            httpClient.setReadTimeout(10000);
+
+            try (OutputStream output = httpClient.getOutputStream()) {
+                output.write(jsonRegistry.getBytes());
+                output.flush();
+            }
+
+            return httpClient.getResponseCode() == 200;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
         }
+    }
 
-        serverUrl = ConfigManager.getSystemProperty("websocket.server.url");
-        if (serverUrl == null) {
-            System.err.println("error load ws server url");
-            return;
+    public static boolean verify() {
+        try{
+            jwtToken = JwtHandler.getJwtToken();
+
+            Map<String, String> jsonVerifyData = new HashMap<>();
+            jsonVerifyData.put("token", jwtToken);
+            String jsonVerify = new Gson().toJson(jsonVerifyData);
+
+            URL verifyUrl = new URL(httpServerUrl + VERIFY_ENDPOINT);
+            HttpURLConnection httpClient = (HttpURLConnection) verifyUrl.openConnection();
+            httpClient.setRequestMethod("POST");
+            httpClient.setRequestProperty("Content-Type", "application/json");
+            httpClient.setDoOutput(true);
+            httpClient.setConnectTimeout(10000);
+            httpClient.setReadTimeout(10000);
+
+            try (OutputStream output = httpClient.getOutputStream()) {
+                output.write(jsonVerify.getBytes());
+                output.flush();
+            }
+
+            return httpClient.getResponseCode() == 200;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
         }
-
-        stompHandler.connect(serverUrl, pcUsername, jwtToken);
-        stompHandler.subscribe("/topic/echo", message -> {
-            System.out.println("📩 Echo: " + message);
-        });
-
-        stompHandler.send("app/echo", "Hello, world");
     }
 }

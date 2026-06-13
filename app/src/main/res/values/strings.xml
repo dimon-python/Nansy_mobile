@@ -1,4 +1,9 @@
 <resources>
     <string name="app_name">Nansy_mobile</string>
-    <string name="login_text">Войти</string>
+    <string name="login_text">Nansy</string>
+    <string name="login_password_input_hint">Пароль</string>
+    <string name="login_username_input_hint">Имя пользователя</string>
+    <string name="login_button_text">Войти</string>
+    <string name="no_data_login_error">Пожалуйста, введите имя пользователя и пароль, это необходимо для входа</string>
+    <string name="not_logged_error">Не удалось войти в аккаунт, проверьте корректность данных</string>
 </resources>
