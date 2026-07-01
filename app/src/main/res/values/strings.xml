@@ -6,4 +6,15 @@
     <string name="login_button_text">Войти</string>
     <string name="no_data_login_error">Пожалуйста, введите имя пользователя и пароль, это необходимо для входа</string>
     <string name="not_logged_error">Не удалось войти в аккаунт, проверьте корректность данных</string>
+    <string name="no_ethernet_text_view">Нет подключения к интернету</string>
+    <string name="no_ethernet_button_text">Проверить</string>
+    <string name="no_ethernet_toast_message">Пожалуйста, проверьте интернет-подключение и повторите попытку</string>
+    <string name="login_no_account_text">Нет аккаунта?</string>
+    <string name="login_open_registry_window_button_text">Зарегистрироваться</string>
+    <string name="registry_open_login_window_button_text">Войти</string>
+    <string name="registry_label_text">Регистрация</string>
+    <string name="registry_account_is_exists_text">Есть аккаунт?</string>
+    <string name="registry_button_text">Зарегистрироваться</string>
+    <string name="no_data_registry_error">Пожалуйста, введите имя пользователя и пароль, это необходимо для регистрации</string>
+    <string name="no_registry_error">Не удалось зарегистрироваться</string>
 </resources>

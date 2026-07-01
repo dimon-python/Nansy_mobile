@@ -26,6 +26,7 @@ public class AuthHttpHandler {
     private static final String LOGIN_ENDPOINT = "/login";
     private final static String REGISTER_ENDPOINT = "/register";
     private final static String VERIFY_ENDPOINT = "/verify";
+    private final static String CHECK_ENDPOINT = "/check";
 
     public static void init(Context context) {
         appContext = context.getApplicationContext();
@@ -33,6 +34,30 @@ public class AuthHttpHandler {
         jwtHandler = new JwtHandler(appContext);
         stompHandler = new StompWebSocketHandler();
         httpServerUrl = ConfigManager.getSystemProperty("auth.server.url");
+        System.out.println("HTTPSERVERURL: " + httpServerUrl);
+    }
+
+    public static boolean checkConnection() {
+        try {
+            String fullUrl = httpServerUrl + CHECK_ENDPOINT;
+            System.out.println("   Full URL = " + fullUrl);
+
+            URL checkConnectionUrl = new URL(fullUrl);
+            HttpURLConnection httpClient = (HttpURLConnection) checkConnectionUrl.openConnection();
+            httpClient.setRequestMethod("GET");
+            httpClient.setConnectTimeout(5000);
+            httpClient.setReadTimeout(5000);
+
+            int status = httpClient.getResponseCode();
+            System.out.println("   Response status = " + status);
+
+            httpClient.disconnect();
+            return status == 200;
+        } catch (IOException e) {
+            System.err.println("❌ checkConnection() error: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
     }
 
     public static boolean login(String username, String password) {
@@ -79,7 +104,7 @@ public class AuthHttpHandler {
         return false;
     }
 
-    public static boolean register(String username, String password) {
+    public static boolean registry(String username, String password) {
         try{
             Map<String, String> jsonRegistryData = new HashMap<>();
             jsonRegistryData.put("username", username);

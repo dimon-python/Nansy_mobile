@@ -13,6 +13,7 @@ public class LoginActivity extends AppCompatActivity {
     private EditText loginUsernameInput;
     private EditText loginPasswordInput;
     private Button loginButton;
+    private Button openRegistryWindowButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -25,8 +26,10 @@ public class LoginActivity extends AppCompatActivity {
         loginUsernameInput = findViewById(R.id.loginUsernameInput);
         loginPasswordInput = findViewById(R.id.loginPasswordInput);
         loginButton = findViewById(R.id.loginButton);
+        openRegistryWindowButton = findViewById(R.id.openRegistryWindowButton);
 
         loginButton.setOnClickListener(v -> {
+            loginButton.setClickable(false);
             String username = loginUsernameInput.getText().toString();
             String password = loginPasswordInput.getText().toString();
             new Thread(() -> {
@@ -45,6 +48,12 @@ public class LoginActivity extends AppCompatActivity {
                     });
                 }
             }).start();
+        });
+
+        openRegistryWindowButton.setOnClickListener(v -> {
+            Intent intent = new Intent(this, RegistryActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
         });
     }
 

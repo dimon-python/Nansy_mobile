@@ -6,10 +6,10 @@
     android:layout_height="match_parent">
 
     <TextView
-        android:id="@+id/loginText"
+        android:id="@+id/registryText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/login_text"
+        android:text="@string/registry_label_text"
         android:textColor="@color/foreground"
         android:textSize="24sp"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -19,7 +19,7 @@
         app:layout_constraintVertical_bias="0.15" />
 
     <EditText
-        android:id="@+id/loginUsernameInput"
+        android:id="@+id/registryUsernameInput"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:backgroundTint="@color/foreground"
@@ -38,7 +38,7 @@
         app:layout_constraintVertical_bias="0.329" />
 
     <EditText
-        android:id="@+id/loginPasswordInput"
+        android:id="@+id/registryPasswordInput"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:backgroundTint="@color/foreground"
@@ -57,11 +57,11 @@
         app:layout_constraintVertical_bias="0.48" />
 
     <Button
-        android:id="@+id/loginButton"
+        android:id="@+id/registryButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:backgroundTint="@color/foreground"
-        android:text="@string/login_button_text"
+        android:text="@string/registry_button_text"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.498"
@@ -74,7 +74,7 @@
         android:layout_height="wrap_content"
         android:textColor="@color/foreground"
         android:textSize="18sp"
-        android:text="@string/login_no_account_text"
+        android:text="@string/registry_account_is_exists_text"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.498"
@@ -83,11 +83,11 @@
         app:layout_constraintVertical_bias="0.759" />
 
     <Button
-        android:id="@+id/openRegistryWindowButton"
+        android:id="@+id/openLoginWindowButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:backgroundTint="@color/background_color"
-        android:text="@string/login_open_registry_window_button_text"
+        android:text="@string/registry_open_login_window_button_text"
         android:textColor="@color/foreground"
         android:textSize="18sp"
         app:layout_constraintBottom_toBottomOf="parent"
